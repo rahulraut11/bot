@@ -1,63 +1,110 @@
 🏗️ Core Architecture & Move Generation
 
-    Pseudolegal Move Generation: Generates all moves that are physically possible (e.g., a Rook moving in a line), deferring the check that the King is safe. This is significantly faster than fully legal generation because you only check for "legality" if a move is actually searched.
+This engine is built around high-performance pseudolegal move generation combined with a deeply optimized search pipeline.
 
-    Polyglot Support via Zobrist Hashing: Uses 64-bit Zobrist keys to uniquely identify positions. This allows the engine to use standard .bin opening books (Polyglot format) and ensures your Transposition Table (TT) is compatible with industry standards.
+Pseudolegal Move Generation
 
-    Hash Key Updates: Implements incremental XOR updates for Zobrist keys. Instead of re-calculating the hash from scratch, you simply XOR out the old piece/square and XOR in the new one—maximizing performance during the search.
+Generates all physically possible moves (e.g., rook sliding moves) without immediately checking king safety.
+
+Legality (king-in-check validation) is deferred until the move is actually searched.
+
+This design significantly improves performance compared to fully legal move generation.
+
+Polyglot Opening Book Support
+
+Uses 64-bit Zobrist hashing to uniquely identify positions.
+
+Fully compatible with Polyglot .bin opening books.
+
+Ensures interoperability with standard chess tooling and engines.
+
+Incremental Zobrist Hashing
+
+Hash keys are updated incrementally using XOR operations.
+
+Old piece/square values are XORed out and new ones XORed in.
+
+Avoids expensive full-board rehashing during search.
 
 🧠 Advanced Search (search.c)
 
-The search follows a specific hierarchy of pruning and reduction techniques to traverse the game tree efficiently:
+The search algorithm uses a layered hierarchy of modern pruning, reduction, and extension techniques to aggressively cut the game tree while preserving tactical accuracy.
 
-    Delta Pruning: Used in Quiescence search; if a capture can't improve the score by at least a "pawn's worth" (delta), it's pruned.
+Quiescence Search Enhancements
 
-    QSEE (Quiescence Static Exchange Evaluation): Filters out "bad" captures in Quiescence search that would result in a material loss.
+Delta Pruning: Prunes captures that cannot improve the score beyond a pawn-sized margin.
 
-    QChkPrune: Prunes checks in Quiescence search that are unlikely to lead to a mate or tactical gain.
+QSEE (Quiescence Static Exchange Evaluation): Filters losing captures during quiescence.
 
-    RFP (Reverse Futility Pruning): Also known as Static Null Move Pruning; prunes nodes if the static evaluation is way above beta.
+QChkPrune: Prunes low-value checks unlikely to yield tactical gain.
 
-    Razoring: A very aggressive pruning technique for nodes that are significantly below alpha.
+Main Search Pruning Techniques
 
-    NMP (Null Move Pruning): Skips a turn to see if the position is still "too good"—if so, the branch is discarded.
+RFP (Reverse Futility Pruning): Prunes nodes when static eval is already well above beta.
 
-    Probcut: A variant of Null Move Pruning that uses a shallower search with a high beta to find cutoffs earlier.
+Razoring: Aggressively cuts nodes far below alpha at shallow depths.
 
-    IID (Internal Iterative Deepening): If a position has no "best move" stored in the TT, IID performs a shallow search to find a good move to start the main search with.
+NMP (Null Move Pruning): Skips a move to detect positions that are “too good to fail.”
 
-    Extensions: Extends the search depth for critical lines (e.g., checks or passed pawns).
+Probcut: Uses a shallow, high-beta search to trigger early cutoffs.
 
-    LMP (Late Move Pruning): Prunes moves that are sorted late in the list if the search is already deep.
+Search Control & Stability
 
-    Futility Pruning: Prunes moves at the leaves of the tree that are unlikely to raise alpha.
+IID (Internal Iterative Deepening): Performs a shallow search to find a good TT move when none is stored.
 
-    SEE (Static Exchange Evaluation): Determines the "material balance" of a series of exchanges on a single square.
+Extensions: Increases depth for critical lines such as checks or passed pawns.
 
-    LMR (Late Move Reductions): Searches moves that appear "worse" (via move ordering) at a reduced depth.
+LMP (Late Move Pruning): Prunes late-ordered moves at deeper depths.
+
+Futility Pruning: Cuts leaf moves unlikely to raise alpha.
+
+LMR (Late Move Reductions): Searches less promising moves at reduced depth.
+
+SEE (Static Exchange Evaluation): Evaluates material outcomes of capture sequences on a square.
 
 📈 Evaluation & Automated Tuning
+Handcrafted Evaluation with Pawn Hashing
 
-    Handcrafted Evaluation with Pawn Hashing: Uses a specialized Pawn Hash Table to cache pawn-structure evaluations (doubled pawns, passed pawns, etc.). Since pawn structures change slowly, this cache can hit >95% of the time, saving massive CPU cycles.
+Uses a dedicated Pawn Hash Table to cache pawn structure evaluations.
 
-    Texel Tuner (SGDM/ADAMW): An automated system to find the optimal values for your evaluation parameters (like the value of a Knight on the 5th rank).
+Pawn structures change infrequently, resulting in >95% cache hit rates.
 
-        SGDM(R): Stochastic Gradient Descent with Momentum (Resilient).
+Saves significant CPU time during deep searches.
 
-        ADAMW(R): A modern optimizer that handles weight decay and adaptive learning rates.
+Texel Tuning
 
-    SPSA Tuner (spsa.c): Simultaneous Perturbation Stochastic Approximation. A "black-box" optimizer that plays thousands of games between different versions of your engine to find the best settings for both search and evaluation.
+Automated tuning of evaluation parameters using gradient-based methods:
+
+SGDM(R): Stochastic Gradient Descent with Momentum (Resilient).
+
+ADAMW(R): Adaptive optimizer with weight decay and learning-rate control.
+
+These methods optimize parameters such as piece-square values and positional bonuses.
+
+SPSA Tuning (spsa.c)
+
+Uses Simultaneous Perturbation Stochastic Approximation.
+
+Runs thousands of self-play games between engine variants.
+
+Optimizes both search parameters and evaluation weights in a black-box manner.
 
 🕒 Move Ordering & History Heuristics
 
-Finding the best move first is what makes the search fast. Your engine uses multiple "History" tables to track move quality:
+Strong move ordering is central to search speed and effectiveness. The engine maintains multiple history tables:
 
-    Corrective History: Adjusts the static evaluation based on historical search results for specific piece-square patterns.
+Corrective History
+Adjusts static evaluation based on historical outcomes of piece-square patterns.
 
-    Continuation History: A multi-ply history (1-ply, 2-ply) that tracks how moves performed when following specific previous moves.
+Continuation History
+Multi-ply (1-ply, 2-ply) tables tracking move success following previous moves.
 
-    Capture History: Specifically tracks the success rate of various capture moves.
+Capture History
+Tracks effectiveness of capture moves independently.
 
-    Regular History: The standard "Butterfly" table that tracks which moves caused beta-cutoffs in the past.
+Regular History (Butterfly Table)
+Records moves that caused beta cutoffs in the past.
 
-    Stat Tracking: A debugging tool that logs the success rate of each heuristic (e.g., "How often did Null Move Pruning actually cause a cutoff?").
+Stat Tracking
+Debugging infrastructure to measure effectiveness of each heuristic
+(e.g., Null Move Pruning cutoff rate).
