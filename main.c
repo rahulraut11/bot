@@ -123,11 +123,75 @@ U64 mask_bishop_attacks(int square){
 U64 mask_rook_attacks(int square){
     U64 attacks = 0ULL ;
 
+    int r, f;
+    
+    int tr = square / 8;
+    int tf = square % 8;
+    
+    for (r = tr + 1; r <= 6; r++) attacks |= (1ULL << (r * 8 + tf));
+    for (r = tr - 1; r >= 1; r--) attacks |= (1ULL << (r * 8 + tf));
+    for (f = tf + 1; f <= 6; f++) attacks |= (1ULL << (tr * 8 + f));
+    for (f = tf - 1; f >= 1; f--) attacks |= (1ULL << (tr * 8 + f));
+
+    return attacks ;
+}
+// generate bishop attacks
+U64 bishop_attacks(U64 bitboard, int square){
+    U64 attacks = 0ULL ;
+
     int rank = square/8 , file = square%8 ;
 
-    for(int r = 1 ; r <=6 ; r++) set_bit(attacks, r*8 + file);
-    for(int f = 1 ; f <=6 ; f++) set_bit(attacks, rank*8 + f);
-    pop_bit(attacks,square) ;
+    for(int r = rank + 1 , f = file + 1 ; r<=7 && f<=7 ; r++ , f++ ) 
+    {
+        set_bit(attacks, r*8 + f);
+        if((1ULL << r*8 + f) & bitboard) break ;
+    }
+    for(int r = rank + 1 , f = file - 1 ; r<=7 && f>=0 ; r++ , f-- ) 
+    {
+        set_bit(attacks, r*8 + f);
+        if((1ULL << r*8 + f) & bitboard) break ;
+    }
+    for(int r = rank - 1 , f = file + 1 ; r>=0 && f<=7 ; r-- , f++ ) 
+    {
+        set_bit(attacks, r*8 + f);
+        if((1ULL << r*8 + f) & bitboard) break ;
+    }
+    for(int r = rank - 1 , f = file - 1 ; r>=0 && f>=0 ; r-- , f-- ) 
+    {
+        set_bit(attacks, r*8 + f);
+        if((1ULL << r*8 + f) & bitboard) break ;
+    }
+    return attacks ;
+}
+// generate rook attacks 
+U64 rook_attacks(U64 bitboard , int square){
+    U64 attacks = 0ULL ;
+
+    int r, f;
+    
+    int tr = square / 8;
+    int tf = square % 8;
+    
+    for (r = tr + 1; r <= 7; r++) 
+    {
+        set_bit(attacks ,r * 8 + tf);
+        if((1ULL << (r * 8 + tf)) & bitboard) break ;
+    }
+    for (r = tr - 1; r >= 0; r--)
+    {
+        set_bit(attacks ,r * 8 + tf);
+        if((1ULL << (r * 8 + tf)) & bitboard) break ;
+    }
+    for (f = tf + 1; f <= 7; f++)
+    {
+        set_bit(attacks ,tr * 8 + f);
+        if((1ULL << (tr * 8 + f)) & bitboard) break ;
+    }
+    for (f = tf - 1; f >= 0; f--)
+    {
+        set_bit(attacks ,tr * 8 + f);
+        if((1ULL << (tr * 8 + f)) & bitboard) break ;
+    }
     return attacks ;
 }
 
@@ -167,6 +231,6 @@ void print_board(U64 bitboard)
 // Main 
 int main()
 {
-    init_leapers_attacks() ;
+    
     return 0;
 }
