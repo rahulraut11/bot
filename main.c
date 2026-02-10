@@ -209,6 +209,23 @@ void init_leapers_attacks(){
     }
 }
 
+U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask){
+
+    U64 occupancy = 0ULL ;
+
+    for(int i = 0 ; i < bits_in_mask ; i++){
+
+        int square = get_lsb_index(attack_mask) ;
+
+        pop_bit(attack_mask,square) ;
+
+        if(index & (1 << i) ) 
+            set_bit(occupancy,square) ;
+    }
+
+    return occupancy ;
+}
+
 //print
 void print_board(U64 bitboard)
 {
@@ -233,6 +250,6 @@ void print_board(U64 bitboard)
 // Main 
 int main()
 {
-   
+    
     return 0;
 }
