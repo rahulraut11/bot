@@ -44,6 +44,30 @@ const char *square_to_cords[] = {
 
 // Attacks 
 
+// bishop relevant occupancy bit count for every square on board
+const int bishop_relevant_bits[64] = {
+    6, 5, 5, 5, 5, 5, 5, 6, 
+    5, 5, 5, 5, 5, 5, 5, 5, 
+    5, 5, 7, 7, 7, 7, 5, 5, 
+    5, 5, 7, 9, 9, 7, 5, 5, 
+    5, 5, 7, 9, 9, 7, 5, 5, 
+    5, 5, 7, 7, 7, 7, 5, 5, 
+    5, 5, 5, 5, 5, 5, 5, 5, 
+    6, 5, 5, 5, 5, 5, 5, 6
+};
+
+// rook relevant occupancy bit count for every square on board
+const int rook_relevant_bits[64] = {
+    12, 11, 11, 11, 11, 11, 11, 12, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    12, 11, 11, 11, 11, 11, 11, 12
+};
+
 //  pawn attacks table [side][square]
 U64 pawn_attacks[2][64] ;
 // knight attacks table (no side req)
@@ -224,6 +248,29 @@ U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask){
     }
 
     return occupancy ;
+}
+// XorShift64* Pseudo-RNG
+static U64 rng_state = 88172645463325252ULL;
+U64 xorshift64star()
+{
+    U64 x = rng_state;
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    rng_state = x;
+    return x * 2685821657736338717ULL;
+}
+
+// XorShift32 Pseudo-RNG
+unsigned int state = 1804289383;
+unsigned int get_random_number()
+{
+    unsigned int number = state;
+    number ^= number << 13;
+    number ^= number >> 17;
+    number ^= number << 5;
+    state = number;
+    return number;
 }
 
 //print
