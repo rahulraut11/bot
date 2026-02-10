@@ -106,6 +106,20 @@ U64 mask_king_attacks(int square){
     return attacks;
 }
 
+U64 mask_bishop_attacks(int square){
+    U64 attacks = 0ULL ;
+
+    int rank = square/8 , file = square%8 ;
+
+    for(int r = rank + 1 , f = file + 1 ; r<=6 && f<=6 ; r++ , f++ ) set_bit(attacks, r*8 + f);
+    for(int r = rank - 1 , f = file + 1 ; r>=1 && f<=6 ; r-- , f++ ) set_bit(attacks, r*8 + f);
+    for(int r = rank + 1 , f = file - 1 ; r<=6 && f>=1 ; r++ , f-- ) set_bit(attacks, r*8 + f);
+    for(int r = rank - 1 , f = file - 1 ; r>=1 && f>=1 ; r-- , f-- ) set_bit(attacks, r*8 + f);
+
+    return attacks ;
+}
+
+
 //initialise attack arrays 
 void init_leapers_attacks(){
 
@@ -143,6 +157,6 @@ void print_board(U64 bitboard)
 int main()
 {
     init_leapers_attacks() ;
-
+    print_board(mask_bishop_attacks(e4));
     return 0;
 }
