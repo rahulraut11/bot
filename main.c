@@ -3,7 +3,6 @@
 
 // definitions
 #define U64 unsigned long long
-// hello
 // constants
 const U64 not_a_file = 18374403900871474942ULL ;
 const U64 not_h_file = 9187201950435737471ULL ;
@@ -13,7 +12,7 @@ const U64 not_hg_file = 4557430888798830399ULL ;
 // macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square))
 #define set_bit(bitboard, square) (bitboard |=(1ULL << square)) 
-#define pop_bit(bitboard, square) (get_bit(bitboard,square)? bitboard ^= (1ULL << square) : 0)
+#define pop_bit(bitboard, square) (get_bit(bitboard,square) ? bitboard ^= (1ULL << square) : 0)
 
 enum{
     a8, b8, c8, d8, e8, f8, g8, h8, 
@@ -26,7 +25,7 @@ enum{
     a1, b1, c1, d1, e1, f1, g1, h1 
 };
 
-enum{ 
+enum{
     white, black
     };
 
@@ -47,6 +46,8 @@ enum{
 U64 pawn_attacks[2][64] ;
 // knight attacks table (no side req)
 U64 knight_attacks[64] ;
+// king attacks table 
+U64 king_attacks[64] ;  
 
 // generate pawn attacks 
 U64 mask_pawn_attacks(int side, int square) 
@@ -86,6 +87,25 @@ U64 mask_knight_attacks(int square){
 
     return attacks ;
 }
+
+// generate king attacks 
+U64 mask_king_attacks(int square){
+
+    U64 attacks = 0ULL , bitboard = 0ULL ;
+    set_bit(bitboard,square);
+
+    if((bitboard<<1) & not_a_file) attacks |= (bitboard<<1) ; 
+    if((bitboard>>1) & not_h_file) attacks |= (bitboard>>1) ; 
+    attacks |= (bitboard<<8) ; 
+    attacks |= (bitboard>>8) ;
+    if((bitboard<<9) & not_a_file) attacks |= (bitboard<<9) ; 
+    if((bitboard>>9) & not_h_file) attacks |= (bitboard>>9) ; 
+    if((bitboard<<7) & not_h_file) attacks |= (bitboard<<7) ; 
+    if((bitboard>>7) & not_a_file) attacks |= (bitboard>>7) ; 
+
+    return attacks;
+}
+
 //initialise attack arrays 
 void init_leapers_attacks(){
 
@@ -94,6 +114,7 @@ void init_leapers_attacks(){
         pawn_attacks[black][square] = mask_pawn_attacks(black,square) ; 
     
         knight_attacks[square] = mask_knight_attacks(square);
+        king_attacks[square] = mask_king_attacks(square) ;
     }
 }
 
@@ -122,7 +143,6 @@ void print_board(U64 bitboard)
 int main()
 {
     init_leapers_attacks() ;
-     
-    
+
     return 0;
 }
