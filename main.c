@@ -42,6 +42,52 @@ const char *square_to_cords[] = {
  "a1" , "b1", "c1", "d1", "e1", "f1", "g1", "h1" 
 };
 
+// RNG
+
+// pseudo random number state
+unsigned int state = 1804289383;
+// generate 32-bit pseudo legal numbers
+unsigned int get_random_U32_number()
+{
+    unsigned int number = state;
+    number ^= number << 13;
+    number ^= number >> 17;
+    number ^= number << 5;
+    state = number;
+    return number;
+}
+
+// generate 64-bit pseudo legal numbers
+U64 get_random_U64_number()
+{
+    U64 n1, n2, n3, n4;
+    
+    // init random numbers slicing 16 bits from MS1B side
+    n1 = (U64)(get_random_U32_number() & 0xFFFF);
+    n2 = (U64)(get_random_U32_number() & 0xFFFF);
+    n3 = (U64)(get_random_U32_number() & 0xFFFF);
+    n4 = (U64)(get_random_U32_number() & 0xFFFF);
+    
+    // return random number
+    return n1 | (n2 << 16) | (n3 << 32) | (n4 << 48);
+}
+U64 generate_magic_number()
+{
+    return get_random_U64_number() & get_random_U64_number() & get_random_U64_number();
+}
+// XorShift64* Pseudo-RNG
+static U64 rng_state = 88172645463325252ULL;
+U64 xorshift64star()
+{
+    U64 x = rng_state;
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    rng_state = x;
+    return x * 2685821657736338717ULL;
+}
+
+
 // Attacks 
 
 // bishop relevant occupancy bit count for every square on board
@@ -248,29 +294,6 @@ U64 set_occupancy(int index, int bits_in_mask, U64 attack_mask){
     }
 
     return occupancy ;
-}
-// XorShift64* Pseudo-RNG
-static U64 rng_state = 88172645463325252ULL;
-U64 xorshift64star()
-{
-    U64 x = rng_state;
-    x ^= x >> 12;
-    x ^= x << 25;
-    x ^= x >> 27;
-    rng_state = x;
-    return x * 2685821657736338717ULL;
-}
-
-// XorShift32 Pseudo-RNG
-unsigned int state = 1804289383;
-unsigned int get_random_number()
-{
-    unsigned int number = state;
-    number ^= number << 13;
-    number ^= number >> 17;
-    number ^= number << 5;
-    state = number;
-    return number;
 }
 
 //print
