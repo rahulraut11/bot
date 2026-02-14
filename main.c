@@ -13,7 +13,7 @@ const U64 not_hg_file = 4557430888798830399ULL ;
 // macros
 #define get_bit(bitboard, square) (bitboard & (1ULL << square))
 #define set_bit(bitboard, square) (bitboard |=(1ULL << square)) 
-#define pop_bit(bitboard, square) (get_bit(bitboard,square) ? bitboard ^= (1ULL << square) : 0)
+#define pop_bit(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
 #define count_bits(bitboard) __builtin_popcountll(bitboard)
 #define get_lsb_index(bb) ((bb) ? __builtin_ctzll(bb) : -1)
 
@@ -26,12 +26,17 @@ enum{
     a4, b4, c4, d4, e4, f4, g4, h4, 
     a3, b3, c3, d3, e3, f3, g3, h3, 
     a2, b2, c2, d2, e2, f2, g2, h2, 
-    a1, b1, c1, d1, e1, f1, g1, h1 
+    a1, b1, c1, d1, e1, f1, g1, h1, no_sq
 };
 
-enum{ white, black };
+enum{ white, black, both};
 
 enum{ rook, bishop };
+
+enum{ wk=1 , wq=2 , bk=4, bq=8};
+
+//encode pieces 
+enum{ P , N , B , R , Q , K , p , n , b , r , q , k} ;
 
 const char *square_to_cords[] = { 
  "a8" , "b8", "c8", "d8", "e8", "f8", "g8", "h8", 
@@ -42,6 +47,28 @@ const char *square_to_cords[] = {
  "a3" , "b3", "c3", "d3", "e3", "f3", "g3", "h3", 
  "a2" , "b2", "c2", "d2", "e2", "f2", "g2", "h2", 
  "a1" , "b1", "c1", "d1", "e1", "f1", "g1", "h1" 
+};
+
+//ascii pieces 
+char ascii_pieces[12] = "PNBRQKpnbrqk" ;
+
+// unicode pieces
+char *unicode_pieces[12] =  {"♙", "♘", "♗", "♖", "♕", "♔", "♟︎", "♞", "♝", "♜", "♛", "♚"} ;
+
+// convert ASCII character pieces to encoded constants
+int char_pieces[] = {
+    ['P'] = P,
+    ['N'] = N,
+    ['B'] = B,
+    ['R'] = R,
+    ['Q'] = Q,
+    ['K'] = K,
+    ['p'] = p,
+    ['n'] = n,
+    ['b'] = b,
+    ['r'] = r,
+    ['q'] = q,
+    ['k'] = k
 };
 
 // rook magic numbers
@@ -179,6 +206,18 @@ U64 bishop_magic_numbers[64] = {
     0x8918844842082200ULL,
     0x4010011029020020ULL
 };
+// piece bitboards
+U64 bitboards[12] ;
+// occupancy bitboards 
+U64 occupancy[3] ;
+
+// side to move
+int side = -1 ;
+// enpassant square
+int enpassant = no_sq ; 
+// castling rights
+int castle ;
+
 
 // RNG
 
@@ -537,24 +576,18 @@ void init_all()
 int main()
 {
     init_all() ; 
-    U64 occupancy = 0ULL;
+
+    set_bit(bitboards[P], e2);
     
-    // set blocker pieces on board
-    set_bit(occupancy, c5);
-    set_bit(occupancy, f2);
-    set_bit(occupancy, g7);
-    set_bit(occupancy, b2);
-    set_bit(occupancy, g5);
-    set_bit(occupancy, e2);
-    set_bit(occupancy, e7);
+    print_board(bitboards[P]);
     
-    // print occupancies
-    print_board(occupancy);
+    #ifdef WIN64
+        printf("piece: %c\n", ascii_pieces[P]);
+        printf("piece: %c\n", ascii_pieces[char_pieces['K']]);
+    #else
+        printf("piece: %s\n", unicode_pieces[P]);
+        printf("piece: %s\n", unicode_pieces[char_pieces['K']]);
+    #endif
     
-    // print rook attacks
-    print_board(get_rook_attacks(e5, occupancy));
-    
-    // print bishop attacks
-    print_board(get_bishop_attacks(d4, occupancy));
     return 0;
 }
