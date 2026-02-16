@@ -212,7 +212,7 @@ U64 bitboards[12] ;
 U64 occupancy[3] ;
 
 // side to move
-int side = -1 ;
+int side;
 // enpassant square
 int enpassant = no_sq ; 
 // castling rights
@@ -545,7 +545,7 @@ static inline U64 get_rook_attacks(int square, U64 occupancy)
 }
 
 //print
-void print_board(U64 bitboard)
+void print_bitboard(U64 bitboard)
 {
     printf("\n");
     for (int rank = 0; rank < 8; rank++)
@@ -565,6 +565,39 @@ void print_board(U64 bitboard)
     printf("Bitboard: %llu \n", bitboard);
 }
 
+void print_board(){
+     printf("\n");
+    for (int rank = 0; rank < 8; rank++)
+    {
+        for (int file = 0; file < 8; file++)
+        {
+            if (file == 0)
+                printf("%d  ", 8 - rank); 
+
+            int square = rank * 8 + file;
+            int piece = -1 ;
+
+            for(int bb_piece = P ; bb_piece <=k ; bb_piece++){
+                if(get_bit(bitboards[bb_piece] , square)) 
+                    piece = bb_piece ;
+            }
+
+            printf("%c ", (piece==-1) ? '.' : ascii_pieces[piece]);
+        }
+        printf("\n");
+    }
+    printf("\n   a b c d e f g h \n\n");
+    printf("     Side:     %s\n", !side ? "white" : "black");
+    
+    printf("     Enpassant:   %s\n", (enpassant != no_sq) ? square_to_cords[enpassant] : "no");
+    
+    printf("     Castling:  %c%c%c%c\n\n", (castle & wk) ? 'K' : '-',
+                                           (castle & wq) ? 'Q' : '-',
+                                           (castle & bk) ? 'k' : '-',
+                                           (castle & bq) ? 'q' : '-');
+}
+
+
 void init_all()
 {
     init_leapers_attacks();
@@ -575,19 +608,7 @@ void init_all()
 // Main 
 int main()
 {
-    init_all() ; 
-
-    set_bit(bitboards[P], e2);
-    
-    print_board(bitboards[P]);
-    
-    #ifdef WIN64
-        printf("piece: %c\n", ascii_pieces[P]);
-        printf("piece: %c\n", ascii_pieces[char_pieces['K']]);
-    #else
-        printf("piece: %s\n", unicode_pieces[P]);
-        printf("piece: %s\n", unicode_pieces[char_pieces['K']]);
-    #endif
-    
+    init_all() ;
+    print_board();
     return 0;
 }
