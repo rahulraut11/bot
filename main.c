@@ -4,6 +4,7 @@
 
 // definitions
 #define U64 unsigned long long
+
 // constants
 const U64 not_a_file = 18374403900871474942ULL ;
 const U64 not_h_file = 9187201950435737471ULL ;
@@ -17,6 +18,12 @@ const U64 not_hg_file = 4557430888798830399ULL ;
 #define count_bits(bitboard) __builtin_popcountll(bitboard)
 #define get_lsb_index(bb) ((bb) ? __builtin_ctzll(bb) : -1)
 
+// FEN dedug positions
+#define empty_board "8/8/8/8/8/8/8/8 w - - "
+#define start_position "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 "
+#define tricky_position "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
+#define killer_position "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1"
+#define cmk_position "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9 "
 
 enum{
     a8, b8, c8, d8, e8, f8, g8, h8, 
@@ -209,7 +216,7 @@ U64 bishop_magic_numbers[64] = {
 // piece bitboards
 U64 bitboards[12] ;
 // occupancy bitboards 
-U64 occupancy[3] ;
+U64 occupancies[3] ;
 
 // side to move
 int side;
@@ -535,13 +542,36 @@ static inline U64 get_bishop_attacks(int square, U64 occupancy)
 // get rook attacks
 static inline U64 get_rook_attacks(int square, U64 occupancy)
 {
-    // get bishop attacks assuming current board occupancy
+    // get rook attacks assuming current board occupancy
     occupancy &= rook_masks[square];
     occupancy *= rook_magic_numbers[square];
     occupancy >>= 64 - rook_relevant_bits[square];
     
     // return rook attacks
     return rook_attacks[square][occupancy];
+}
+
+// get queen attacks
+static inline U64 get_queen_attacks(int square, U64 occupancy)
+{
+    U64 queen_attacks = 0ULL;
+    
+    U64 bishop_occupancy = occupancy;
+    U64 rook_occupancy = occupancy;
+    
+    bishop_occupancy &= bishop_masks[square];
+    bishop_occupancy *= bishop_magic_numbers[square];
+    bishop_occupancy >>= 64 - bishop_relevant_bits[square];
+    
+    queen_attacks = bishop_attacks[square][bishop_occupancy];
+    
+    rook_occupancy &= rook_masks[square];
+    rook_occupancy *= rook_magic_numbers[square];
+    rook_occupancy >>= 64 - rook_relevant_bits[square];
+    
+    queen_attacks |= rook_attacks[square][rook_occupancy];
+    
+    return queen_attacks;
 }
 
 //print
@@ -597,6 +627,94 @@ void print_board(){
                                            (castle & bq) ? 'q' : '-');
 }
 
+// parse FEN string
+void parse_fen(char *fen)
+{
+    // reset board 
+    memset(bitboards, 0ULL, sizeof(bitboards));
+    memset(occupancies, 0ULL, sizeof(occupancies));    
+    side = 0;
+    enpassant = no_sq;
+    castle = 0;
+    
+    // parse board
+    for (int rank = 0; rank < 8; rank++)
+    {
+        for (int file = 0; file < 8; file++)
+        {
+            int square = rank * 8 + file;
+
+            if ((*fen >= 'a' && *fen <= 'z') || (*fen >= 'A' && *fen <= 'Z'))
+            {
+                int piece = char_pieces[*fen];
+                set_bit(bitboards[piece], square);
+                *fen++;
+            }
+            
+            if (*fen >= '0' && *fen <= '9')
+            {
+                int offset = *fen - '0';
+                int piece = -1;
+                for (int bb_piece = P; bb_piece <= k; bb_piece++)
+                    if (get_bit(bitboards[bb_piece], square))
+                        piece = bb_piece;
+
+                if (piece == -1)
+                    file--;
+                
+                file += offset;
+                
+                *fen++;
+            }
+            
+            if (*fen == '/')
+                *fen++;
+        }
+    }
+    
+    //parsing side to move
+    *fen++;
+    (*fen == 'w') ? (side = white) : (side = black);
+    
+    //parsing castling rights
+    fen += 2;
+    while (*fen != ' ')
+    {
+        switch (*fen)
+        {
+            case 'K': castle |= wk; break;
+            case 'Q': castle |= wq; break;
+            case 'k': castle |= bk; break;
+            case 'q': castle |= bq; break;
+            case '-': break;
+        }
+        *fen++;
+    }
+    
+    //parsing enpassant square 
+    *fen++;
+
+    // parse enpassant square
+    if (*fen != '-')
+    {
+        int file = fen[0] - 'a';
+        int rank = 8 - (fen[1] - '0');
+
+        enpassant = rank * 8 + file;
+    }
+    else
+        enpassant = no_sq;
+    
+    // set occupancies
+    for (int piece = P; piece <= K; piece++)
+        occupancies[white] |= bitboards[piece];
+    
+    for (int piece = p; piece <= k; piece++)
+        occupancies[black] |= bitboards[piece];
+    
+    occupancies[both] |= occupancies[white];
+    occupancies[both] |= occupancies[black];
+}
 
 void init_all()
 {
@@ -609,6 +727,33 @@ void init_all()
 int main()
 {
     init_all() ;
+    parse_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 w q a3 0 9 ");
+    
+    // print chess board
     print_board();
+
+    
+    // parse fen
+    parse_fen(start_position);
+    
+    // print chess board
+    print_board();
+    
+    
+    // parse fen
+    parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b Kk e6 0 1 ");
+    
+    // print chess board
+    print_board();
+
+    
+    // print black occupancies
+    print_bitboard(occupancies[black]);
+    
+    // print white occupancies
+    print_bitboard(occupancies[white]);
+    
+    // print all occupancies
+    print_bitboard(occupancies[both]);    
     return 0;
 }
