@@ -10,7 +10,6 @@ static const U64 not_a_file = 18374403900871474942ULL ;
 static const U64 not_h_file = 9187201950435737471ULL ;
 static const U64 not_ab_file = 18229723555195321596ULL ;
 static const U64 not_hg_file = 4557430888798830399ULL ;
-
 // macros
 #define get_bit(bitboard, square) ((bitboard & (1ULL << square)))
 #define set_bit(bitboard, square) ((bitboard |=(1ULL << square))) 
@@ -731,19 +730,135 @@ static inline void generate_moves()
     int source_square, target_square;
     U64 bitboard, attacks;
     
-    // loop over all the bitboards
     for (int piece = P; piece <= k; piece++)
     {
         bitboard = bitboards[piece];
+        
         // generate white pawns & white king castling moves
         if (side == white)
         {
-        
+            if (piece == P)
+            {
+                while (bitboard)
+                {
+                    source_square = get_lsb_index(bitboard);
+                    target_square = source_square - 8;
+                    
+                    // generate quite pawn moves
+                    if (!(target_square < a8) && !get_bit(occupancies[both], target_square))
+                    {
+                        // pawn promotion
+                        if (source_square >= a7 && source_square <= h7)
+                        {
+                            printf("pawn promotion: %s%sq\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion: %s%sr\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion: %s%sb\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion: %s%sn\n", square_to_cords[source_square], square_to_cords[target_square]);
+                        }
+                        
+                        else
+                        {
+                            // one square ahead pawn move
+                            printf("pawn push: %s%s\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            
+                            // two squares ahead pawn move
+                            if ((source_square >= a2 && source_square <= h2) && !get_bit(occupancies[both], target_square - 8))
+                                printf("double pawn push: %s%s\n", square_to_cords[source_square], square_to_cords[target_square - 8]);
+                        }
+                    }
+                    attacks = pawn_attacks[side][source_square] & occupancies[black];
+                    
+                    // generate pawn captures
+                    while (attacks)
+                    {
+                        target_square = get_lsb_index(attacks);
+                        // pawn promotion
+                        if (source_square >= a7 && source_square <= h7)
+                        {
+                            printf("pawn promotion capture: %s%sq\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion capture: %s%sr\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion capture: %s%sb\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion capture: %s%sn\n", square_to_cords[source_square], square_to_cords[target_square]);
+                        }
+                        
+                        else
+                            // one square ahead pawn move
+                            printf("pawn capture: %s%s\n", square_to_cords[source_square], square_to_cords[target_square]);
+                        // pop ls1b of the pawn attacks
+                        pop_bit(attacks, target_square);
+                    }
+    
+                    // generate enpassant captures
+                    if (enpassant != no_sq)
+                    {
+                        // lookup pawn attacks and bitwise AND with enpassant square (bit)
+                        U64 enpassant_attacks = pawn_attacks[side][source_square] & (1ULL << enpassant);
+                        
+                        // enpassant capture available ? 
+                        if (enpassant_attacks)
+                        {
+                            int target_enpassant = get_lsb_index(enpassant_attacks);
+                            printf("pawn enpassant capture: %s%s\n", square_to_cords[source_square], square_to_cords[target_enpassant]);
+                        }
+                    }
+                    pop_bit(bitboard, source_square);
+                }
+            }
         }
-        // generate black pawns & black king castling moves
         else
         {
-        
+            if (piece == p)
+            {
+                while (bitboard)
+                {
+                    source_square = get_lsb_index(bitboard);
+                    target_square = source_square + 8;
+                    
+                    if (!(target_square > h1) && !get_bit(occupancies[both], target_square))
+                    {
+                        if (source_square >= a2 && source_square <= h2)
+                        {
+                            printf("pawn promotion: %s%sq\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion: %s%sr\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion: %s%sb\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion: %s%sn\n", square_to_cords[source_square], square_to_cords[target_square]);
+                        }
+                        
+                        else
+                        {
+                            printf("pawn push: %s%s\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            
+                            if ((source_square >= a7 && source_square <= h7) && !get_bit(occupancies[both], target_square + 8))
+                                printf("double pawn push: %s%s\n", square_to_cords[source_square], square_to_cords[target_square + 8]);
+                        }
+                    }
+                    attacks = pawn_attacks[side][source_square] & occupancies[white];
+                    while (attacks)
+                    {
+                        target_square = get_lsb_index(attacks);
+                        if (source_square >= a2 && source_square <= h2)
+                        {
+                            printf("pawn promotion capture: %s%sq\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion capture: %s%sr\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion capture: %s%sb\n", square_to_cords[source_square], square_to_cords[target_square]);
+                            printf("pawn promotion capture: %s%sn\n", square_to_cords[source_square], square_to_cords[target_square]);
+                        }
+                        else
+                            printf("pawn capture: %s%s\n", square_to_cords[source_square], square_to_cords[target_square]);
+                        pop_bit(attacks, target_square);
+                    }
+                    if (enpassant != no_sq)
+                    {
+                        U64 enpassant_attacks = pawn_attacks[side][source_square] & (1ULL << enpassant);
+                        if (enpassant_attacks)
+                        {
+                            int target_enpassant = get_lsb_index(enpassant_attacks);
+                            printf("pawn enpassant capture: %s%s\n", square_to_cords[source_square], square_to_cords[target_enpassant]);
+                        }
+                    }
+                    pop_bit(bitboard, source_square);
+                }
+            }
         }
     }
 }
@@ -759,6 +874,11 @@ void init_all()
 int main()
 {
     init_all() ;
-     
+     parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R b KQkq a3 0 1 ");
+    print_board();
+    
+    // generate moves
+    generate_moves();
+
     return 0;
 }
