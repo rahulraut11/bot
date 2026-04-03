@@ -725,6 +725,29 @@ void parse_fen(char *fen)
     occupancies[both] |= occupancies[black];
 }
 
+// generate all moves
+static inline void generate_moves()
+{
+    int source_square, target_square;
+    U64 bitboard, attacks;
+    
+    // loop over all the bitboards
+    for (int piece = P; piece <= k; piece++)
+    {
+        bitboard = bitboards[piece];
+        // generate white pawns & white king castling moves
+        if (side == white)
+        {
+        
+        }
+        // generate black pawns & black king castling moves
+        else
+        {
+        
+        }
+    }
+}
+
 void init_all()
 {
     init_leapers_attacks();
