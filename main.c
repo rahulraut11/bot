@@ -6,17 +6,17 @@
 #define U64 unsigned long long
 
 // constants
-const U64 not_a_file = 18374403900871474942ULL ;
-const U64 not_h_file = 9187201950435737471ULL ;
-const U64 not_ab_file = 18229723555195321596ULL ;
-const U64 not_hg_file = 4557430888798830399ULL ;
+static const U64 not_a_file = 18374403900871474942ULL ;
+static const U64 not_h_file = 9187201950435737471ULL ;
+static const U64 not_ab_file = 18229723555195321596ULL ;
+static const U64 not_hg_file = 4557430888798830399ULL ;
 
 // macros
-#define get_bit(bitboard, square) (bitboard & (1ULL << square))
-#define set_bit(bitboard, square) (bitboard |=(1ULL << square)) 
-#define pop_bit(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
-#define count_bits(bitboard) __builtin_popcountll(bitboard)
-#define get_lsb_index(bb) ((bb) ? __builtin_ctzll(bb) : -1)
+#define get_bit(bitboard, square) ((bitboard & (1ULL << square)))
+#define set_bit(bitboard, square) ((bitboard |=(1ULL << square))) 
+#define pop_bit(bitboard, square) (((bitboard) &= ~(1ULL << (square))))
+#define count_bits(bitboard)  (__builtin_popcountll(bitboard))
+#define get_lsb_index(bb) (((bb) ? __builtin_ctzll(bb) : -1))
 
 // FEN dedug positions
 #define empty_board "8/8/8/8/8/8/8/8 w - - "
@@ -408,22 +408,22 @@ U64 bishop_attacks_on_fly(int square, U64 bitboard){
     for(int r = rank + 1 , f = file + 1 ; r<=7 && f<=7 ; r++ , f++ ) 
     {
         set_bit(attacks, r*8 + f);
-        if((1ULL << r*8 + f) & bitboard) break ;
+        if((1ULL << (r*8 + f)) & bitboard) break ;
     }
     for(int r = rank + 1 , f = file - 1 ; r<=7 && f>=0 ; r++ , f-- ) 
     {
         set_bit(attacks, r*8 + f);
-        if((1ULL << r*8 + f) & bitboard) break ;
+        if((1ULL << (r*8 + f)) & bitboard) break ;
     }
     for(int r = rank - 1 , f = file + 1 ; r>=0 && f<=7 ; r-- , f++ ) 
     {
         set_bit(attacks, r*8 + f);
-        if((1ULL << r*8 + f) & bitboard) break ;
+        if((1ULL << (r*8 + f)) & bitboard) break ;
     }
     for(int r = rank - 1 , f = file - 1 ; r>=0 && f>=0 ; r-- , f-- ) 
     {
         set_bit(attacks, r*8 + f);
-        if((1ULL << r*8 + f) & bitboard) break ;
+        if((1ULL << (r*8 + f)) & bitboard) break ;
     }
     return attacks ;
 }
@@ -552,28 +552,9 @@ static inline U64 get_rook_attacks(int square, U64 occupancy)
 }
 
 // get queen attacks
-static inline U64 get_queen_attacks(int square, U64 occupancy)
-{
-    U64 queen_attacks = 0ULL;
-    
-    U64 bishop_occupancy = occupancy;
-    U64 rook_occupancy = occupancy;
-    
-    bishop_occupancy &= bishop_masks[square];
-    bishop_occupancy *= bishop_magic_numbers[square];
-    bishop_occupancy >>= 64 - bishop_relevant_bits[square];
-    
-    queen_attacks = bishop_attacks[square][bishop_occupancy];
-    
-    rook_occupancy &= rook_masks[square];
-    rook_occupancy *= rook_magic_numbers[square];
-    rook_occupancy >>= 64 - rook_relevant_bits[square];
-    
-    queen_attacks |= rook_attacks[square][rook_occupancy];
-    
-    return queen_attacks;
+static inline U64 get_queen_attacks(int square, U64 occupancy) {
+    return get_bishop_attacks(square, occupancy) | get_rook_attacks(square, occupancy);
 }
-
 
 // is current given square attacked by the current given side
 static inline int is_square_attacked(int square, int side)
@@ -677,54 +658,38 @@ void print_board(){
 // parse FEN string
 void parse_fen(char *fen)
 {
-    // reset board 
     memset(bitboards, 0ULL, sizeof(bitboards));
     memset(occupancies, 0ULL, sizeof(occupancies));    
     side = 0;
     enpassant = no_sq;
     castle = 0;
     
-    // parse board
-    for (int rank = 0; rank < 8; rank++)
+    // Parse the pieces and empty squares
+    int rank = 0, file = 0;
+    while (*fen != ' ') // Run until the space separating board from side-to-move
     {
-        for (int file = 0; file < 8; file++)
+        if ((*fen >= 'a' && *fen <= 'z') || (*fen >= 'A' && *fen <= 'Z'))
         {
-            int square = rank * 8 + file;
-
-            if ((*fen >= 'a' && *fen <= 'z') || (*fen >= 'A' && *fen <= 'Z'))
-            {
-                int piece = char_pieces[*fen];
-                set_bit(bitboards[piece], square);
-                *fen++;
-            }
-            
-            if (*fen >= '0' && *fen <= '9')
-            {
-                int offset = *fen - '0';
-                int piece = -1;
-                for (int bb_piece = P; bb_piece <= k; bb_piece++)
-                    if (get_bit(bitboards[bb_piece], square))
-                        piece = bb_piece;
-
-                if (piece == -1)
-                    file--;
-                
-                file += offset;
-                
-                *fen++;
-            }
-            
-            if (*fen == '/')
-                *fen++;
+            int piece = char_pieces[(int)*fen];
+            set_bit(bitboards[piece], rank * 8 + file);
+            file++;
         }
+        else if (*fen >= '0' && *fen <= '9')
+        {
+            file += (*fen - '0'); // Skip the empty squares 
+        }
+        else if (*fen == '/')
+        {
+            rank++;
+            file = 0; // Reset file for new rank
+        }
+        fen++;
     }
-    
-    //parsing side to move
-    *fen++;
-    (*fen == 'w') ? (side = white) : (side = black);
-    
-    //parsing castling rights
-    fen += 2;
+    fen++; 
+    //Parse side to move
+    side = (*fen == 'w') ? white : black;
+    fen += 2; 
+    //Parse castling rights
     while (*fen != ' ')
     {
         switch (*fen)
@@ -735,30 +700,27 @@ void parse_fen(char *fen)
             case 'q': castle |= bq; break;
             case '-': break;
         }
-        *fen++;
+        fen++;
     }
-    
-    //parsing enpassant square 
-    *fen++;
-
-    // parse enpassant square
+    fen++;
+    //Parse en passant square
     if (*fen != '-')
     {
-        int file = fen[0] - 'a';
-        int rank = 8 - (fen[1] - '0');
-
-        enpassant = rank * 8 + file;
+        int f = fen[0] - 'a';
+        int r = 8 - (fen[1] - '0');
+        enpassant = r * 8 + f;
     }
     else
+    {
         enpassant = no_sq;
+    }
     
-    // set occupancies
+    // Set occupancies
     for (int piece = P; piece <= K; piece++)
         occupancies[white] |= bitboards[piece];
-    
     for (int piece = p; piece <= k; piece++)
         occupancies[black] |= bitboards[piece];
-    
+        
     occupancies[both] |= occupancies[white];
     occupancies[both] |= occupancies[black];
 }
