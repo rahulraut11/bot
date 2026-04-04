@@ -1102,15 +1102,32 @@ void init_all()
     init_sliders_attacks(rook);
 }
 
+/*
+          binary move bits                               hexidecimal constants
+    
+    0000 0000 0000 0000 0011 1111    source square       0x3f
+    0000 0000 0000 1111 1100 0000    target square       0xfc0
+    0000 0000 1111 0000 0000 0000    piece               0xf000
+    0000 1111 0000 0000 0000 0000    promoted piece      0xf0000
+    0001 0000 0000 0000 0000 0000    capture flag        0x100000
+    0010 0000 0000 0000 0000 0000    double push flag    0x200000
+    0100 0000 0000 0000 0000 0000    enpassant flag      0x400000
+    1000 0000 0000 0000 0000 0000    castling flag       0x800000
+*/
+
 // Main 
 int main()
 {
     init_all() ;
-     parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R w KQkq a3 0 1 ");
+    // parse custom FEN string
+    parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ");
     print_board();
     
-    // generate moves
-    generate_moves();
-
+    int move = 0;
+    move = (move | 63) << 6;
+    print_bitboard(move);
+    int target_square = (move & 0xfc0) >> 6;
+    
+    printf("target square: %d   %s\n", target_square, square_to_cords[target_square]);
     return 0;
 }
