@@ -26,6 +26,15 @@ static const U64 RANK_7 = 0x000000000000FF00ULL;
 #define killer_position "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1"
 #define cmk_position "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9 "
 
+#define get_move_source(move) (move & 0x3f)
+#define get_move_target(move) ((move & 0xfc0) >> 6)
+#define get_move_piece(move) ((move & 0xf000) >> 12)
+#define get_move_promoted(move) ((move & 0xf0000) >> 16)
+#define get_move_capture(move) (move & 0x100000)
+#define get_move_double(move) (move & 0x200000)
+#define get_move_enpassant(move) (move & 0x400000)
+#define get_move_castling(move) (move & 0x800000)
+
 enum{
     a8, b8, c8, d8, e8, f8, g8, h8, 
     a7, b7, c7, d7, e7, f7, g7, h7, 
@@ -77,6 +86,18 @@ int char_pieces[] = {
     ['r'] = r,
     ['q'] = q,
     ['k'] = k
+};
+
+// promoted pieces
+char promoted_pieces[] = {
+    [Q] = 'q',
+    [R] = 'r',
+    [B] = 'b',
+    [N] = 'n',
+    [q] = 'q',
+    [r] = 'r',
+    [b] = 'b',
+    [n] = 'n'
 };
 
 // rook magic numbers
@@ -1126,53 +1147,57 @@ void init_all()
     (enpassant << 22) | \
     (castling << 23)    \
     
-// extract source square
-#define get_move_source(move) (move & 0x3f)
 
-// extract target square
-#define get_move_target(move) ((move & 0xfc0) >> 6)
+// move list structure
+typedef struct {
+    // moves
+    int moves[256];
+    // move count
+    int count;
+} moves;
 
-// extract piece
-#define get_move_piece(move) ((move & 0xf000) >> 12)
+// add move to the move list
+static inline void add_move(moves *move_list, int move)
+{
+    // store move
+    move_list->moves[move_list->count] = move;
+    // increment move count
+    move_list->count++;
+}
 
-// extract promoted piece
-#define get_move_promoted(move) ((move & 0xf0000) >> 16)
-
-// extract capture flag
-#define get_move_capture(move) (move & 0x100000)
-
-// extract double pawn push flag
-#define get_move_double(move) (move & 0x200000)
-
-// extract enpassant flag
-#define get_move_enpassant(move) (move & 0x400000)
-
-// extract castling flag
-#define get_move_castling(move) (move & 0x800000)
-
+// print move 
+void print_move(int move)
+{
+    printf("%s%s%c\n", square_to_cords[get_move_source(move)],
+                     square_to_cords[get_move_target(move)],
+                     promoted_pieces[get_move_promoted(move)]);
+}
+void print_move_list(moves *move_list)
+{
+    printf("\n    move    piece   capture   double    enpass    castling\n\n");
+    for (int move_count = 0; move_count < move_list->count; move_count++)
+    {
+        int move = move_list->moves[move_count];
+        
+            printf("    %s%s%c   %c       %d         %d         %d         %d\n", square_to_cords[get_move_source(move)],
+                                                                                  square_to_cords[get_move_target(move)],
+                                                                                  promoted_pieces[get_move_promoted(move)],
+                                                                                  ascii_pieces[get_move_piece(move)],
+                                                                                  get_move_capture(move) ? 1 : 0,
+                                                                                  get_move_double(move) ? 1 : 0,
+                                                                                  get_move_enpassant(move) ? 1 : 0,
+                                                                                  get_move_castling(move) ? 1 : 0);
+        
+        printf("\n\n    Total number of moves: %d\n\n", move_list->count);
+    }
+}
 // Main 
 int main()
 {
     init_all() ;
-    
-    // create move
-    int move = encode_move(d7, e8, P, Q, 1, 0, 0, 0);
-    
-    // exract move items
-    int source_square = get_move_source(move);
-    int target_square = get_move_target(move);
-    int piece = get_move_piece(move);
-    int promoted_piece = get_move_promoted(move);
-    
-    // print move items
-    printf("source square: %s\n", square_to_cords[source_square]);
-    printf("target square: %s\n", square_to_cords[target_square]);
-    printf("piece: %c\n", ascii_pieces[piece]);
-    printf("piece: %c\n", ascii_pieces[promoted_piece]);
-    printf("capture flag: %d\n", get_move_capture(move) ? 1 : 0);
-    printf("double pawn push flag: %d\n", get_move_double(move) ? 1 : 0);
-    printf("enpassant flag: %d\n", get_move_enpassant(move) ? 1 : 0);
-    printf("castling flag: %d\n", get_move_castling(move) ? 1 : 0);
-
+    moves move_list[1];
+    move_list->count = 0;
+    add_move(move_list, encode_move(d7, e8, B, Q, 0, 0, 0, 1));
+    print_move_list(move_list);
     return 0;
 }
