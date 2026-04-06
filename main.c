@@ -35,6 +35,19 @@ static const U64 RANK_7 = 0x000000000000FF00ULL;
 #define get_move_enpassant(move) (move & 0x400000)
 #define get_move_castling(move) (move & 0x800000)
 
+// preserve board state
+#define copy_board()                                                      \
+    U64 bitboards_copy[12], occupancies_copy[3];                          \
+    int side_copy, enpassant_copy, castle_copy;                           \
+    memcpy(bitboards_copy, bitboards, 96);                                \
+    memcpy(occupancies_copy, occupancies, 24);                            \
+    side_copy = side, enpassant_copy = enpassant, castle_copy = castle;   \
+
+// restore board state
+#define take_back()                                                       \
+    memcpy(bitboards, bitboards_copy, 96);                                \
+    memcpy(occupancies, occupancies_copy, 24);                            \
+    side = side_copy, enpassant = enpassant_copy, castle = castle_copy;   \
 
 // encode move
 #define encode_move(source, target, piece, promoted, capture, double, enpassant, castling) \
@@ -1210,10 +1223,21 @@ void init_all()
 int main()
 {
     init_all() ;
-    parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ");
-    print_board() ;
-    moves move_list[1];
-    generate_moves(move_list) ;
-    print_move_list(move_list);
+    
+    parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ");
+    print_board();
+    
+    // preserve board state
+    copy_board();
+    
+    // parse empty 
+    parse_fen(empty_board);
+    print_board();
+    
+    // restore board state
+    take_back();
+
+    print_board();
+
     return 0;
 }
