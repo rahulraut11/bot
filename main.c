@@ -894,6 +894,16 @@ static inline int make_move(int move, int move_flag)
             // set up promoted piece on chess board
             set_bit(bitboards[promoted_piece], target_square);
         }
+        // handle enpassant captures
+        if (enpass)
+        {
+            // erase the pawn depending on side to move
+            (side == white) ? pop_bit(bitboards[p], target_square + 8) :
+                              pop_bit(bitboards[P], target_square - 8);
+        }
+        
+        // reset enpassant square
+        enpassant = no_sq;
     }
     
     // capture moves
@@ -1303,11 +1313,11 @@ void init_all()
 // Main 
 int main()
 {
-   // init all
+    // init all
     init_all();
     
     // parse fen
-    parse_fen("r3k2r/pPppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ");
+    parse_fen("r3k2r/p11pqpb1/bn2pnp1/2pPN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq a3 0 1 ");
     print_board();
     
     // create move list instance
@@ -1328,11 +1338,13 @@ int main()
         // make move
         make_move(move, all_moves);
         print_board();
+        //print_bitboard(bitboards[p]);
         getchar();
         
         // take back
         take_back();
         print_board();
+        //print_bitboard(bitboards[p]);
         getchar();
     }
     return 0 ;
