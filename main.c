@@ -828,6 +828,45 @@ void print_move_list(moves *move_list)
 
 }
 
+// move types
+enum { all_moves, only_captures };
+
+// make move on chess board
+static inline int make_move(int move, int move_flag)
+{
+    // quite moves
+    if (move_flag == all_moves)
+    {
+        // preserve board state
+        copy_board();
+        
+        int source_square = get_move_source(move);
+        int target_square = get_move_target(move);
+        int piece = get_move_piece(move);
+        int promoted = get_move_promoted(move);
+        int capture = get_move_capture(move);
+        int double_push = get_move_double(move);
+        int enpass = get_move_enpassant(move);
+        int castling = get_move_castling(move);
+        
+        // move piece
+        pop_bit(bitboards[piece], source_square);
+        set_bit(bitboards[piece], target_square);
+    }
+    
+    // capture moves
+    else
+    {
+        // make sure move is the capture
+        if (get_move_capture(move))
+            make_move(move, all_moves);
+        //  the move is not a capture
+        else
+            // don't make it
+            return 0;
+    }
+}
+
 // generate all moves
 static inline void generate_moves(moves *move_list)
 {
@@ -1224,20 +1263,35 @@ int main()
 {
     init_all() ;
     
-    parse_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq c6 0 1 ");
+    // parse fen
+    parse_fen(tricky_position);
     print_board();
     
-    // preserve board state
-    copy_board();
+    // create move list instance
+    moves move_list[1];
     
-    // parse empty 
-    parse_fen(empty_board);
-    print_board();
+    // generate moves
+    generate_moves(move_list);
     
-    // restore board state
-    take_back();
-
-    print_board();
+    // loop over generated moves
+    for (int move_count = 0; move_count < move_list->count; move_count++)
+    {
+        // init move
+        int move = move_list->moves[move_count];
+        
+        // preserve board state
+        copy_board();
+        
+        // make move
+        make_move(move, all_moves);
+        print_board();
+        getchar();
+        
+        // take back
+        take_back();
+        print_board();
+        getchar();
+    }
 
     return 0;
 }
