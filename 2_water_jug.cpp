@@ -1,33 +1,3 @@
-/*
- * Problem 2: Water Jug Problem
- * ----------------------------
- * Two jugs: 4-litre (Jug A) and 3-litre (Jug B), unlimited water pump,
- * water can be poured on the ground. Neither jug has measuring marks.
- * Goal: Get exactly 2 litres of water in the 4-litre jug.
- *
- * Approach:
- * State = (amountInJugA, amountInJugB)
- * From every state, six possible actions:
- *   1. Fill Jug A completely
- *   2. Fill Jug B completely
- *   3. Empty Jug A
- *   4. Empty Jug B
- *   5. Pour Jug A into Jug B (until A is empty or B is full)
- *   6. Pour Jug B into Jug A (until B is empty or A is full)
- *
- * We use BFS over the state space to find the shortest sequence of
- * actions from (0,0) to a state where Jug A == 2 (goal).
- *
- * Manual step-by-step solution (one valid sequence):
- *   Start:            (0, 0)
- *   Fill Jug A (4L):  (4, 0)
- *   Pour A -> B:      (1, 3)   [A had 4, B can take 3, so A now has 1]
- *   Empty Jug B:      (1, 0)
- *   Pour A -> B:      (0, 1)   [A had 1, pour it all into B]
- *   Fill Jug A (4L):  (4, 1)
- *   Pour A -> B:      (2, 3)   [B needs 2 more to be full, A gives 2, leaves 2]
- *   --> Jug A now has exactly 2 litres. GOAL REACHED.
- */
 
 #include <bits/stdc++.h>
 using namespace std;
@@ -36,21 +6,26 @@ const int CAP_A = 4; // capacity of jug A (4-litre)
 const int CAP_B = 3; // capacity of jug B (3-litre)
 const int GOAL = 2;  // target amount of water in Jug A
 
-struct State {
+struct State
+{
     int a, b;
-    bool operator==(const State &other) const {
+    bool operator==(const State &other) const
+    {
         return a == other.a && b == other.b;
     }
 };
 
 // Hash function so State can be used in unordered_map/unordered_set
-struct StateHash {
-    size_t operator()(const State &s) const {
+struct StateHash
+{
+    size_t operator()(const State &s) const
+    {
         return hash<int>()(s.a) * 31 + hash<int>()(s.b);
     }
 };
 
-int main() {
+int main()
+{
     State start = {0, 0};
 
     // BFS setup
@@ -64,11 +39,13 @@ int main() {
     State goalState = {-1, -1};
     bool found = false;
 
-    while (!q.empty() && !found) {
+    while (!q.empty() && !found)
+    {
         State cur = q.front();
         q.pop();
 
-        if (cur.a == GOAL) {
+        if (cur.a == GOAL)
+        {
             goalState = cur;
             found = true;
             break;
@@ -96,8 +73,10 @@ int main() {
             nextStates.push_back({{cur.a + pour, cur.b - pour}, "Pour Jug B -> Jug A"});
         }
 
-        for (auto &[nxt, action] : nextStates) {
-            if (visited.find(nxt) == visited.end()) {
+        for (auto &[nxt, action] : nextStates)
+        {
+            if (visited.find(nxt) == visited.end())
+            {
                 visited.insert(nxt);
                 parent[nxt] = {cur, action};
                 q.push(nxt);
@@ -105,7 +84,8 @@ int main() {
         }
     }
 
-    if (!found) {
+    if (!found)
+    {
         cout << "No solution found.\n";
         return 0;
     }
@@ -113,7 +93,8 @@ int main() {
     // Reconstruct path from goalState back to start
     vector<pair<State, string>> path;
     State cur = goalState;
-    while (!(cur == start)) {
+    while (!(cur == start))
+    {
         auto &[par, action] = parent[cur];
         path.push_back({cur, action});
         cur = par;
@@ -125,7 +106,8 @@ int main() {
          << CAP_A << "-litre jug.\n\n";
     cout << "Solution steps (BFS shortest path):\n";
     cout << "-------------------------------------\n";
-    for (size_t i = 0; i < path.size(); i++) {
+    for (size_t i = 0; i < path.size(); i++)
+    {
         cout << i << ". " << left << setw(22) << path[i].second
              << " -> State (JugA=" << path[i].first.a
              << "L, JugB=" << path[i].first.b << "L)\n";
